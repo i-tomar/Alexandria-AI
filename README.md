@@ -1,168 +1,251 @@
 # AI Learning Companion
 
-AI Learning Companion is a FastAPI-based video learning assistant that lets users ingest a YouTube lecture, ask grounded questions about it, and jump to exact timestamps. It uses local transcript processing and embeddings by default, with optional Gemini 1.5 Flash responses when `GOOGLE_API_KEY` is configured.
+AI Learning Companion is a FastAPI-based learning assistant that turns a YouTube video or uploaded file into a grounded study companion. It can ingest transcripts, answer questions with timestamps, generate summaries, and support multi-turn conversations.
 
-## What’s Included
+## What It Does
 
-- YouTube transcript ingestion with automatic caption selection and translation fallback
-- Local file upload ingestion through AssemblyAI
-- Chunked transcript storage in ChromaDB with timestamp metadata
-- Q&A with timestamps for jump-to-moment navigation
-- Overall, topic-wise, and last-N-minutes summaries
-- Session support for multi-turn Q&A
-- Optional Gemini 1.5 Flash generation for more natural answers and summaries
+- Ingests YouTube links and uses transcript extraction with translation fallback when captions are available
+- Accepts uploaded audio/video files and transcribes them through AssemblyAI
+- Chunks transcripts and stores them in ChromaDB with timestamp metadata
+- Answers questions using transcript context and returns jump-to-moment timestamps
+- Generates overall summaries, topic summaries, and last-N-minutes summaries
+- Supports session IDs for continuing a conversation across multiple questions
+- Uses Gemini 1.5 Flash when `GOOGLE_API_KEY` is configured, with safe local fallbacks if it is not
 
-## Stack
+## Tech Stack
 
 - Backend: FastAPI
 - Vector store: ChromaDB
 - Embeddings: `sentence-transformers` with `all-MiniLM-L6-v2`
-- Transcript source: `youtube-transcript-api` and AssemblyAI
+- YouTube transcript source: `youtube-transcript-api`
+- File transcription: AssemblyAI
 - Optional generation: Gemini 1.5 Flash via `google-generativeai`
+- API docs: Swagger UI at `/docs`
 
-## Backend Structure
+## Project Structure
 
-- `backend/main.py`: API routes and app setup
-- `backend/ingest.py`: transcript loading, chunking, and storage
-- `backend/rag.py`: retrieval and grounded answer generation
-- `backend/summarizer.py`: overall and timed summaries
-- `backend/utils/`: chunking, similarity, Gemini client, and transcript storage helpers
+- `backend/main.py`: FastAPI app, routes, CORS, and request handling
+- `backend/ingest.py`: YouTube transcript loading, AssemblyAI file transcription, chunk creation, and storage
+- `backend/rag.py`: retrieval logic and grounded question answering
+- `backend/summarizer.py`: overall, topic-wise, and last-minutes summaries
+- `backend/session.py`: simple session memory for multi-turn Q&A
+- `backend/utils/`: chunking, similarity scoring, transcript storage, Gemini client, AssemblyAI client, and env loading helpers
+- `chroma_db/`: persistent transcript vector store
 
-## Environment
+## Requirements
 
-Create a `.env` file in the project root with:
+Create a `.env` file in the project root with your API keys:
 
 ```env
 GOOGLE_API_KEY=your_google_api_key_here
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 ```
 
-`GOOGLE_API_KEY` is optional. If it is not present, the backend keeps working with the local fallback pipeline.
+`GOOGLE_API_KEY` is optional. If it is missing, the backend still runs and uses the local retrieval fallback for answers and summaries.
 
-## Run the Backend
+`ASSEMBLYAI_API_KEY` is required for file upload transcription through `/ingest-file`.
+
+## Install And Run
+
+From the project root:
 
 ```powershell
 cd z:\AI-Learning-Companion
+python -m pip install -r backend\requirements.txt
 python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Open the docs at `http://127.0.0.1:8000/docs`.
-
-## Core API
-
-- `GET /` - service overview
-- `GET /ping` - health check
-- `POST /ingest` - ingest a YouTube URL
-- `POST /ingest-file` - upload a local audio/video file for transcription
-- `POST /ask` - ask a question about the ingested video
-- `POST /ask/stream` - streaming answer endpoint
-- `GET /summary/{video_id}` - overall summary
-- `GET /topic-summaries/{video_id}` - topic summaries
-- `GET /last-minutes/{video_id}?minutes=5` - time-based summary
-- `GET /timestamps/{video_id}` - chunk timestamps for the UI
-
-Example ingest request:
-
-```json
-{
-  "video_url": "https://www.youtube.com/watch?v=VIDEO_ID"
-}
-```
-
-Example ask request:
-
-```json
-{
-  "video_id": "your-video-id",
-  "question": "What is the main topic?",
-  "session_id": "optional-session-id"
-}
-```
-
-## Frontend Next Step
-
-The frontend should call the FastAPI endpoints above, render the answer plus timestamps, and use those timestamps to seek the video player. See [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md) for the request flow and UI recommendations.
-
-## Removed Legacy Code
-
-The old Express/Node MVP files and temporary debugging scripts were removed so the repository now centers on the active FastAPI + Gemini stack.
-
-Response:
-
-```json
-{
-  "summary": "Short lecture summary appears here..."
-}
-```
-
-## Future Improvements
-
-- Add persistent storage for multiple videos
-- Return timestamps with answers
-- Improve scoring with TF-IDF or embeddings
-- Add real LLM-based summaries when free credits or local models are available
-- Add user sessions
-- Add upload support for `.txt` transcript files
-- Add CORS configuration for production frontend deployment
-- Add tests for transcript fetching, chunking, Q&A, and summaries
-- Add better language support for non-English captions
-
-## Demo Guide for Judges
-
-1. Start the backend:
-
-```powershell
-cd backend
-npm install
-npm start
-```
-
-2. Open the React frontend.
-
-3. Paste a YouTube lecture URL.
-
-4. Click the load button.
-
-5. If captions are available, the app will show that the transcript is loaded.
-
-6. If captions are unavailable, paste a short transcript manually and load again.
-
-7. Ask a question such as:
+Open the API docs in your browser:
 
 ```text
-What is the main idea of this lecture?
+http://127.0.0.1:8000/docs
 ```
 
-8. Review the answer returned from the transcript.
+## Quick Health Check
 
-9. Click the summary button to see a short lecture summary.
+Verify the backend is running:
 
-Recommended demo flow:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/ping"
+```
 
-- Show automatic caption loading first.
-- Ask one specific question from the lecture.
-- Show the summary.
-- Then show the manual transcript fallback to prove the app still works when YouTube captions are unavailable.
+Expected response:
+
+```json
+{
+  "message": "working",
+  "status": "ok"
+}
+```
+
+## How To Use It
+
+### 1. Ingest a YouTube video
+
+Send a YouTube URL to `/ingest`.
+
+```powershell
+$body = @{
+  video_url = "https://www.youtube.com/watch?v=VIDEO_ID"
+} | ConvertTo-Json
+
+$response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/ingest" -Method Post -ContentType "application/json" -Body $body
+$response | ConvertTo-Json -Depth 4
+
+$videoId = $response.video_id
+```
+
+The response returns a `video_id`. Save it because every later question and summary uses that ID.
+
+Example response:
+
+```json
+{
+  "video_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "success",
+  "message": "Video ingested successfully. Use video_id '550e8400-e29b-41d4-a716-446655440000' for queries."
+}
+```
+
+### 2. Ask a question
+
+Use `/ask` with the returned `video_id`.
+
+```powershell
+$body = @{
+  video_id = "550e8400-e29b-41d4-a716-446655440000"
+  question = "What is the main topic?"
+  session_id = "mentor-demo-session"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/ask" -Method Post -ContentType "application/json" -Body $body
+```
+
+The response includes:
+
+- `answer`: grounded response from the transcript
+- `timestamps`: best matching start/end timestamps in seconds
+- `session_id`: returned or reused session identifier
+
+### 3. Read summaries
+
+Use these endpoints after ingesting a video:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/summary/$videoId"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/topic-summaries/$videoId"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/last-minutes/$videoId?minutes=5"
+```
+
+### 4. Build a clickable timeline
+
+Fetch timestamps for each chunk:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/timestamps/$videoId"
+```
+
+Each chunk includes a start time and duration, which you can use to seek a video player.
+
+### 5. Upload a local file
+
+Upload an audio or video file to `/ingest-file`.
+
+```powershell
+curl.exe -s -X POST `
+  -F "file=@Z:\AI-Learning-Companion\sample.wav" `
+  -F "title=sample upload" `
+  http://127.0.0.1:8000/ingest-file
+```
+
+Replace `sample.wav` with any local audio or video file you want to upload.
+
+This path uses AssemblyAI, so make sure `ASSEMBLYAI_API_KEY` is present in `.env`.
+
+## API Endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | API overview |
+| `GET` | `/ping` | Health check |
+| `GET` | `/health` | Detailed health response |
+| `POST` | `/ingest` | Ingest a YouTube URL |
+| `POST` | `/ingest-file` | Upload a local audio/video file for transcription |
+| `POST` | `/ask` | Ask a grounded question |
+| `POST` | `/ask/stream` | Stream an answer as NDJSON chunks |
+| `GET` | `/summary/{video_id}` | Overall summary |
+| `GET` | `/topic-summaries/{video_id}` | Topic-wise summaries |
+| `GET` | `/last-minutes/{video_id}?minutes=5` | Summary for the last N minutes |
+| `GET` | `/timestamps/{video_id}` | Timeline data for UI seeking |
+
+## Response Shapes
+
+### Ingest
+
+```json
+{
+  "video_id": "uuid-string",
+  "status": "success",
+  "message": "Video ingested successfully. Use video_id 'uuid-string' for queries."
+}
+```
+
+### Ask
+
+```json
+{
+  "answer": "Grounded answer from the transcript.",
+  "timestamps": [100, 125],
+  "session_id": "mentor-demo-session",
+  "status": "success"
+}
+```
+
+### Summary
+
+```json
+{
+  "video_id": "uuid-string",
+  "summary": "Short lecture summary goes here.",
+  "type": "overall",
+  "status": "success"
+}
+```
+
+## Recommended Demo Flow For The Mentor
+
+1. Start the backend.
+2. Open `http://127.0.0.1:8000/docs` to show the live API.
+3. Ingest a YouTube video.
+4. Ask one specific question from the lecture.
+5. Show the timestamps and explain that they can drive video seeking.
+6. Open the summary endpoints to show the overall and topic summaries.
+7. Upload a file to `/ingest-file` to show the AssemblyAI fallback.
+8. If `GOOGLE_API_KEY` is configured, show that answers and summaries become more natural while staying grounded in the transcript.
+
+## Frontend Integration
+
+The frontend should call these endpoints directly and use the returned timestamps to jump in the player. The file [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md) contains example request flows and UI recommendations for the next stage.
 
 ## Notes
 
-This project is optimized for a hackathon MVP. The backend currently stores one loaded transcript in memory, so restarting the server clears the loaded video. This keeps the implementation simple and free while leaving a clear path for future upgrades.
+- Answers stay grounded in the ingested transcript context.
+- Session support allows the mentor to ask follow-up questions without reloading the video each time.
+- If Gemini is not configured, the app still works with local retrieval and fallback summaries.
+- If file transcription fails, the first thing to check is `ASSEMBLYAI_API_KEY` in `.env`.
 
-// # RAG in oour project 
+## Troubleshooting
 
+- If `/ingest-file` returns an AssemblyAI configuration error, add `ASSEMBLYAI_API_KEY` and restart the backend.
+- If `/ask` says no data was found, make sure you copied the `video_id` from `/ingest` correctly.
+- If transcript ingestion looks weak for a YouTube video, try a different public video with captions enabled.
+- If the backend will not start, check the terminal running Uvicorn for import or dependency errors.
 
-YouTube Video
-       ↓
-Transcript Extraction
-       ↓
-Transcript Chunking
-       ↓
-Store Chunks in Memory
-       ↓
-User Question
-       ↓
-Keyword Matching / Retrieval
-       ↓
-Find Best Chunk
-       ↓
-Return Answer
+## What Changed In This Version
+
+- Replaced the old Node/Express demo instructions with the actual FastAPI startup flow
+- Added the live YouTube transcript pipeline with translation fallback
+- Added AssemblyAI file upload transcription
+- Added Gemini-backed grounded Q&A and summaries as an optional enhancement
+- Added timestamps, streaming answers, and session support
+- Added a mentor-focused demo workflow and troubleshooting notes
