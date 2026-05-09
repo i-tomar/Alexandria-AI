@@ -370,3 +370,50 @@ If all checked, your backend is **working perfectly**! 🎉
 5. **Build your frontend**: Use this API with a video player
 
 **You're all set!** Start testing! 🚀
+
+---
+
+## 🧠 AI Learning Companion: Master Project Blueprint
+
+Use this as the project-level reference when extending or rebuilding the system.
+
+**Goal**: A RAG-based video learning assistant that lets users chat with lectures, get smart summaries, and jump to exact timestamps from questions.
+
+**Stack**:
+- Backend: FastAPI (Python)
+- Vector store: ChromaDB
+- Embeddings: `sentence-transformers` with `all-MiniLM-L6-v2`
+- Generative model: Gemini 1.5 Flash
+- Transcription: `youtube-transcript-api` for YouTube and AssemblyAI for local file uploads
+- Frontend: React or Next.js with Video.js
+
+**Architecture**:
+1. Ingest transcripts from YouTube or local files.
+2. Split transcript into timestamped chunks with overlap.
+3. Embed chunks and store them in ChromaDB with metadata.
+4. Retrieve the top matching chunks for Q&A.
+5. Ground responses strictly in the retrieved context and return timestamps.
+6. Generate overall summaries, topic summaries, and last-N-minutes summaries.
+
+**Operating rules for AI assistants**:
+- Keep logic modular across `ingest`, `rag`, `summarizer`, and route files.
+- Always return timestamps for navigation in the video player.
+- Prefer local embedding models to keep latency and cost low.
+- Use `.env` for API keys, including `GOOGLE_API_KEY` and `ASSEMBLYAI_API_KEY`.
+- Handle transcript failures, translation issues, and missing captions gracefully.
+- Keep answers grounded in transcript context; do not invent video content.
+
+**Backend references**:
+- `backend/main.py`: API entry point and routes
+- `backend/ingest.py`: transcript loading and storage
+- `backend/rag.py`: retrieval and grounded answer generation
+- `backend/summarizer.py`: summary generation
+- `backend/data/`: static transcript assets and fixtures
+
+**Standard setup**:
+1. Create `.env` with `GOOGLE_API_KEY` and `ASSEMBLYAI_API_KEY`.
+2. Install dependencies with `pip install -r backend/requirements.txt`.
+3. Run the server with `uvicorn backend.main:app --reload`.
+4. POST to `/ingest` with `video_url`.
+5. POST to `/ask` with `video_id` and `question`.
+6. POST to `/ingest-file` with a local audio or video file to use AssemblyAI transcription.

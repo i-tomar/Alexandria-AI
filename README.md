@@ -1,263 +1,91 @@
-# AI Learning Companion for YouTube Lectures
+# AI Learning Companion
 
-AI Learning Companion is a hackathon MVP that helps students learn from YouTube lectures. A user loads a YouTube video, the backend extracts captions when available, processes the transcript into searchable chunks, and answers questions using simple keyword matching.
+AI Learning Companion is a FastAPI-based video learning assistant that lets users ingest a YouTube lecture, ask grounded questions about it, and jump to exact timestamps. It uses local transcript processing and embeddings by default, with optional Gemini 1.5 Flash responses when `GOOGLE_API_KEY` is configured.
 
-The goal is to keep the system free, fast, and easy to demo.
+## What’s Included
 
-## Problem Statement
+- YouTube transcript ingestion with automatic caption selection and translation fallback
+- Local file upload ingestion through AssemblyAI
+- Chunked transcript storage in ChromaDB with timestamp metadata
+- Q&A with timestamps for jump-to-moment navigation
+- Overall, topic-wise, and last-N-minutes summaries
+- Session support for multi-turn Q&A
+- Optional Gemini 1.5 Flash generation for more natural answers and summaries
 
-Students often watch long lecture videos and need quick help finding the most relevant explanation, reviewing key points, or asking questions about the content. Manually scrubbing through a video is slow, and full AI/RAG systems can be too expensive or complex for a hackathon MVP.
+## Stack
 
-This project solves that by using YouTube captions and lightweight transcript search to provide quick Q&A and summaries without paid APIs.
+- Backend: FastAPI
+- Vector store: ChromaDB
+- Embeddings: `sentence-transformers` with `all-MiniLM-L6-v2`
+- Transcript source: `youtube-transcript-api` and AssemblyAI
+- Optional generation: Gemini 1.5 Flash via `google-generativeai`
 
-## Solution Overview
+## Backend Structure
 
-The app works in three simple parts:
+- `backend/main.py`: API routes and app setup
+- `backend/ingest.py`: transcript loading, chunking, and storage
+- `backend/rag.py`: retrieval and grounded answer generation
+- `backend/summarizer.py`: overall and timed summaries
+- `backend/utils/`: chunking, similarity, Gemini client, and transcript storage helpers
 
-1. The user enters a YouTube lecture URL.
-2. The backend fetches the transcript from YouTube captions. If captions are unavailable, the user can paste a manual transcript.
-3. The backend cleans and chunks the transcript, then uses keyword matching to answer questions and generate a short summary.
+## Environment
 
-This is not a full LLM-based system yet. It is intentionally simple so it can run for free and be extended later.
+Create a `.env` file in the project root with:
 
-## Features
-
-### AI Q&A
-
-Users can ask questions about the loaded lecture. The backend extracts important words from the question, compares them against transcript chunks, and returns the most relevant chunk as the answer.
-
-### Transcript Extraction
-
-The backend supports:
-
-- YouTube captions through the `youtube-transcript` package
-- Auto-generated captions when YouTube exposes them through the same caption source
-- Manual transcript input when no captions are available
-
-### Summary Generation
-
-The summary endpoint returns a short overview from the most useful early transcript chunks. This keeps the MVP free and fast while still giving judges and users a useful lecture preview.
-
-## Tech Stack
-
-### Frontend
-
-- React
-- Fetch API or Axios for backend requests
-- Simple UI with:
-  - YouTube URL input
-  - Manual transcript textarea fallback
-  - Ask-question box
-  - Answer display
-  - Summary display
-
-### Backend
-
-- Node.js
-- Express.js
-- `youtube-transcript` for caption fetching
-- In-memory transcript storage for the MVP
-
-### AI Logic
-
-- Keyword extraction
-- Stop-word filtering
-- Transcript chunk scoring
-- Best-match answer selection
-
-No paid AI APIs are required.
-
-## How It Works
-
-1. User enters a YouTube URL in the frontend.
-2. Frontend sends the URL to `POST /load-video`.
-3. Backend tries to fetch captions using `youtube-transcript`.
-4. If captions are found, the backend cleans the transcript.
-5. If captions are not found, the backend returns an error asking for a manual transcript.
-6. User can paste a transcript and call `POST /load-video` again with `manualTranscript`.
-7. Backend splits the transcript into small chunks.
-8. User asks a question through `POST /ask`.
-9. Backend scores transcript chunks against the question keywords.
-10. Backend returns the most relevant chunk as the answer.
-11. User can call `GET /summary` to get a short lecture summary.
-
-## Folder Structure
-
-```text
-AI-Learning-Companion/
-├── backend/
-│   ├── server.js
-│   ├── package.json
-│   ├── routes/
-│   │   └── apiRoutes.js
-│   ├── services/
-│   │   ├── transcriptService.js
-│   │   └── qaService.js
-│   ├── utils/
-│   ├── data/
-│   └── legacy Python files
-├── frontend/
-│   └── React app files
-├── README.md
-├── TESTING_GUIDE.md
-└── FRONTEND_INTEGRATION.md
+```env
+GOOGLE_API_KEY=your_google_api_key_here
+ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 ```
 
-### Backend Files
-
-- `backend/server.js`: Starts the Express server and registers routes.
-- `backend/routes/apiRoutes.js`: Defines `/load-video`, `/ask`, and `/summary`.
-- `backend/services/transcriptService.js`: Fetches, cleans, and chunks transcripts.
-- `backend/services/qaService.js`: Handles keyword matching, answering, and summary generation.
-- `backend/package.json`: Node dependencies and start scripts.
-
-### Frontend Files
-
-The frontend can be built as a standard React app in a `frontend/` folder. It should call the backend endpoints and display loading states, errors, answers, and summaries.
-
-## Setup Instructions
-
-### Prerequisites
-
-- Node.js 18 or newer
-- npm
-- A browser
-- Optional: Python, only if you want to inspect or reuse the older Python backend files
+`GOOGLE_API_KEY` is optional. If it is not present, the backend keeps working with the local fallback pipeline.
 
 ## Run the Backend
 
-From the project root:
-
 ```powershell
-cd backend
-npm install
-npm start
+cd z:\AI-Learning-Companion
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The backend will run on:
+Open the docs at `http://127.0.0.1:8000/docs`.
 
-```text
-http://localhost:3000
-```
+## Core API
 
-For development with auto-restart:
+- `GET /` - service overview
+- `GET /ping` - health check
+- `POST /ingest` - ingest a YouTube URL
+- `POST /ingest-file` - upload a local audio/video file for transcription
+- `POST /ask` - ask a question about the ingested video
+- `POST /ask/stream` - streaming answer endpoint
+- `GET /summary/{video_id}` - overall summary
+- `GET /topic-summaries/{video_id}` - topic summaries
+- `GET /last-minutes/{video_id}?minutes=5` - time-based summary
+- `GET /timestamps/{video_id}` - chunk timestamps for the UI
 
-```powershell
-npm run dev
-```
-
-## Run the Frontend
-
-If the React frontend has not been created yet, create it from the project root:
-
-```powershell
-npm create vite@latest frontend -- --template react
-cd frontend
-npm install
-npm run dev
-```
-
-The Vite frontend usually runs on:
-
-```text
-http://localhost:5173
-```
-
-In the React app, call the backend at:
-
-```text
-http://localhost:3000
-```
-
-Example frontend request:
-
-```js
-const response = await fetch("http://localhost:3000/load-video", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ youtubeUrl }),
-});
-```
-
-If CORS is needed during frontend integration, add the `cors` package to the backend and enable it in `server.js`.
-
-## API Endpoints
-
-### `GET /`
-
-Health and service overview.
-
-Response:
+Example ingest request:
 
 ```json
 {
-  "service": "AI Learning Companion",
-  "status": "ok",
-  "endpoints": ["POST /load-video", "POST /ask", "GET /summary"]
+  "video_url": "https://www.youtube.com/watch?v=VIDEO_ID"
 }
 ```
 
-### `POST /load-video`
-
-Loads a YouTube video transcript or manual transcript.
-
-Request with YouTube URL:
+Example ask request:
 
 ```json
 {
-  "youtubeUrl": "https://www.youtube.com/watch?v=VIDEO_ID"
+  "video_id": "your-video-id",
+  "question": "What is the main topic?",
+  "session_id": "optional-session-id"
 }
 ```
 
-Request with manual transcript:
+## Frontend Next Step
 
-```json
-{
-  "manualTranscript": "Paste lecture transcript text here..."
-}
-```
+The frontend should call the FastAPI endpoints above, render the answer plus timestamps, and use those timestamps to seek the video player. See [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md) for the request flow and UI recommendations.
 
-Success response:
+## Removed Legacy Code
 
-```json
-{
-  "status": "loaded",
-  "source": "youtube-captions",
-  "chunks": 12
-}
-```
-
-No captions response:
-
-```json
-{
-  "error": "No captions found. Please send manualTranscript in /load-video."
-}
-```
-
-### `POST /ask`
-
-Answers a question using the currently loaded transcript.
-
-Request:
-
-```json
-{
-  "question": "What is supervised learning?"
-}
-```
-
-Response:
-
-```json
-{
-  "answer": "The most relevant transcript chunk appears here..."
-}
-```
-
-### `GET /summary`
-
-Returns a short summary of the currently loaded transcript.
+The old Express/Node MVP files and temporary debugging scripts were removed so the repository now centers on the active FastAPI + Gemini stack.
 
 Response:
 

@@ -1,19 +1,43 @@
 import chromadb
 from .utils.summary_helper import summarize_by_topics, get_last_n_minutes_summary
+from .utils.transcript_store import get_chunks
+from .utils.gemini_client import generate_text, gemini_available
+
+
+def _build_overall_summary_prompt(chunks):
+    context = []
+    for chunk in chunks[:16]:
+        context.append(f"({chunk.get('start', 0):.2f}-{chunk.get('end', 0):.2f}s) {chunk.get('text', '')}")
+    return (
+        "Write a concise overall summary of the video transcript below. "
+        "Stay faithful to the transcript only. Do not add outside knowledge.\n\n"
+        + "\n".join(context)
+    )
 
 def get_summary(video_id):
     try:
         client = chromadb.PersistentClient(path="./chroma_db")
         collection = client.get_collection(name="transcripts")
         results = collection.get(where={"video_id": video_id}, limit=5)
-        texts = [m['text'] for m in results['metadatas']]
-        summary = " ".join([t for t in texts if t])
+        chunks = [
+            {
+                'text': m.get('text', ''),
+                'start': m.get('start_time', 0),
+                'end': m.get('end_time', 0)
+            }
+            for m in results['metadatas']
+        ]
+        summary = " ".join([c['text'] for c in chunks if c.get('text')])
+        if chunks and gemini_available():
+            try:
+                gemini_summary = generate_text(_build_overall_summary_prompt(chunks), temperature=0.2, max_output_tokens=220)
+                if gemini_summary:
+                    summary = gemini_summary
+            except Exception as e:
+                print(f"Gemini overall summary failed: {e}")
     except Exception as e:
         print(f"Summary failed: {e}, using fallback")
-        global fallback_store
-        if 'fallback_store' not in globals():
-            fallback_store = []
-        chunks = [c for c in fallback_store if c['video_id'] == video_id][:5]
+        chunks = get_chunks(video_id)[:5]
         summary = " ".join([c['text'] for c in chunks])
     if not summary:
         return "Summary is not available yet. Please ingest a video first."
@@ -37,10 +61,7 @@ def get_topic_summaries(video_id):
         full_text = " ".join([c['text'] for c in chunks])
     except Exception as e:
         print(f"Topic summary failed: {e}, using fallback")
-        global fallback_store
-        if 'fallback_store' not in globals():
-            fallback_store = []
-        chunks = [c for c in fallback_store if c['video_id'] == video_id]
+        chunks = get_chunks(video_id)
         full_text = " ".join([c['text'] for c in chunks])
     
     if not chunks:
@@ -64,10 +85,7 @@ def get_last_minutes_summary(video_id, minutes: int = 5):
         ]
     except Exception as e:
         print(f"Last N minutes summary failed: {e}, using fallback")
-        global fallback_store
-        if 'fallback_store' not in globals():
-            fallback_store = []
-        chunks = [c for c in fallback_store if c['video_id'] == video_id]
+        chunks = get_chunks(video_id)
     
     if not chunks:
         return {"summary": "No content available", "timestamp": 0}

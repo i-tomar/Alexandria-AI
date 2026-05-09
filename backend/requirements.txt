@@ -5,3 +5,5 @@ sentence-transformers
 chromadb
 scikit-learn
 youtube-transcript-api
+google-generativeai
+python-multipart

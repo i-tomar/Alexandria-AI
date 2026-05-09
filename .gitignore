@@ -7,12 +7,17 @@ __pycache__/
 
 # Virtual environment
 .venv/
+.venv-*/
 venv/
 env/
 
 # Chroma DB files and temporary data
 chroma_db/
 temp/
+*.wav
+*.mp3
+*.mp4
+*.webm
 
 # Local config and secrets
 *.env

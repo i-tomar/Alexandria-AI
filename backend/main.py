@@ -1,13 +1,18 @@
+from .utils.env_loader import load_project_env
+load_project_env()
+
 from fastapi import FastAPI, HTTPException
+from fastapi import UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uuid
 import json
-from .ingest import ingest_video
+from .ingest import ingest_video, ingest_assemblyai_file
 from .rag import ask_question
 from .summarizer import get_summary, get_topic_summaries, get_last_minutes_summary
 from .session import get_session_history, add_to_session
+from .utils.transcript_store import get_chunks
 
 app = FastAPI(
     title="AI Learning Companion",
@@ -24,6 +29,10 @@ app.add_middleware(
 
 class IngestRequest(BaseModel):
     video_url: str
+
+
+class LocalUploadRequest(BaseModel):
+    title: str | None = None
 
 class AskRequest(BaseModel):
     video_id: str
@@ -61,6 +70,23 @@ def ingest(request: IngestRequest):
     except Exception as e:
         print(f"Ingest failed: {e}")
         raise HTTPException(status_code=500, detail=f"Ingest failed: {str(e)}")
+
+
+@app.post("/ingest-file")
+async def ingest_file(file: UploadFile = File(...), title: str | None = Form(None)):
+    try:
+        video_id = str(uuid.uuid4())
+        file_bytes = await file.read()
+        print(f"File ingest request received for file={file.filename} assign video_id={video_id}")
+        ingest_assemblyai_file(file_bytes, file.filename or title or "upload", video_id)
+        return {
+            "video_id": video_id,
+            "status": "success",
+            "message": f"File ingested successfully. Use video_id '{video_id}' for queries.",
+        }
+    except Exception as e:
+        print(f"File ingest failed: {e}")
+        raise HTTPException(status_code=500, detail=f"File ingest failed: {str(e)}")
 
 @app.post("/ask")
 def ask(request: AskRequest):
@@ -174,9 +200,8 @@ def timestamps(video_id: str):
         }
     except Exception as e:
         print(f"Timestamps failed: {e}")
-        global fallback_store
-        if 'fallback_store' in globals():
-            fs = [c for c in fallback_store if c.get('video_id') == video_id]
+        fs = get_chunks(video_id)
+        if fs:
             return {
                 "video_id": video_id,
                 "timestamps": [{"time": int(c.get('start_time', 0)), "label": f"Chunk {i + 1}"} for i, c in enumerate(fs)],
