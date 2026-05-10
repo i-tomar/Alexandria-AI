@@ -155,11 +155,11 @@ export default function IngestPanel({ onIngestSuccess }) {
         display: 'flex', 
         alignItems: 'center',
         gap: '0.5rem',
-        background: '#121212',
-        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
-        border: '2px solid #16e059'
+        background: '#ffffff',
+        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(0, 0, 0, 0.05)'
       }}>
-        <div style={{ padding: '0 1.25rem', color: '#16e059' }}>
+        <div style={{ padding: '0 1.25rem', color: '#9ca3af' }}>
           <Video size={24} />
         </div>
         <input 
@@ -172,7 +172,7 @@ export default function IngestPanel({ onIngestSuccess }) {
             flex: 1, 
             border: 'none', 
             background: 'transparent', 
-            color: '#fff',
+            color: '#1e293b',
             fontSize: '1.25rem',
             boxShadow: 'none',
             padding: '1rem 0',
@@ -186,8 +186,8 @@ export default function IngestPanel({ onIngestSuccess }) {
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            background: '#16e059',
-            color: '#000',
+            background: '#10b981',
+            color: '#fff',
             width: '80px',
             height: '60px',
             borderRadius: '999px',
@@ -200,13 +200,13 @@ export default function IngestPanel({ onIngestSuccess }) {
 
       {/* Sub-buttons Row */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-         <button style={{ background: '#222', color: '#ccc', border: 'none', borderRadius: '12px', padding: '0.8rem 1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => document.getElementById('file-input').click()}>
+         <button style={{ background: '#ffffff', color: '#4b5563', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '12px', padding: '0.8rem 1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }} onClick={() => document.getElementById('file-input').click()}>
             <Upload size={16} /> Upload
          </button>
-         <button style={{ background: '#222', color: '#ccc', border: 'none', borderRadius: '12px', padding: '0.8rem 1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+         <button style={{ background: '#ffffff', color: '#4b5563', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '12px', padding: '0.8rem 1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
             <Copy size={16} /> YouTube Video Link
          </button>
-         <button style={{ background: '#222', color: '#ccc', border: 'none', borderRadius: '12px', padding: '0.8rem 1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+         <button style={{ background: '#ffffff', color: '#4b5563', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '12px', padding: '0.8rem 1.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
             <Plus size={16} /> Other Links
          </button>
       </div>

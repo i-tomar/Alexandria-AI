@@ -8,6 +8,25 @@ import SummaryDashboard from './components/SummaryDashboard';
 import Timeline from './components/Timeline';
 import './index.css';
 
+const FAQItem = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="faq-item" onClick={() => setIsOpen(!isOpen)}>
+      <div className="faq-question">
+        {question}
+        <div style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}>
+          <ArrowRight size={20} />
+        </div>
+      </div>
+      {isOpen && (
+        <div className="fade-in" style={{ marginTop: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '1.05rem' }}>
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const [videoId, setVideoId] = useState(null);
   const [youtubeId, setYoutubeId] = useState(null);
@@ -68,9 +87,16 @@ function App() {
                 <span>🌿 Botanical Intelligence • Trusted by 50,000+ Learners</span>
               </div>
 
-              <h1 className="font-display fade-in" style={{ fontSize: '5.5rem', lineHeight: 1.1, marginBottom: '2rem', fontWeight: 800 }}>
-                #1 <span style={{ color: '#16e059' }}>Free</span> AI Video <br />
-                Summarizer
+              <h1 className="font-display fade-in" style={{ 
+                fontSize: '4rem', 
+                lineHeight: 1.15, 
+                marginBottom: '2rem', 
+                fontWeight: 800, 
+                color: '#312e81',
+                letterSpacing: '-0.02em'
+              }}>
+                Distill the <span style={{ color: '#8b5cf6' }}>noise</span>. <br />
+                Discover the <span style={{ color: '#0d9488' }}>essence</span>.
               </h1>
 
               <p className="hero-subtitle fade-in" style={{ fontSize: '1.4rem', color: 'var(--on-surface-variant)', maxWidth: '800px', margin: '0 auto 3rem', lineHeight: 1.6 }}>
@@ -79,27 +105,11 @@ function App() {
               </p>
 
               <div className="fade-in" style={{ maxWidth: '750px', margin: '0 auto', position: 'relative' }}>
-                <div style={{
-                  background: '#16e059',
-                  color: '#000',
-                  padding: '0.4rem 1.25rem',
-                  borderRadius: '12px 12px 0 0',
-                  display: 'inline-block',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  position: 'absolute',
-                  top: '-32px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  zIndex: 10
-                }}>
-                  Start with 200 Free Minutes
-                </div>
+
                 <IngestPanel onIngestSuccess={handleIngestSuccess} />
 
                 <div className="platform-icons fade-in" style={{ animationDelay: '0.2s' }}>
                   <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" className="platform-icon" alt="YouTube" />
-                  <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" className="platform-icon" alt="TikTok" />
                   <img src="https://cdn-icons-png.flaticon.com/512/5968/5968812.png" className="platform-icon" alt="Twitch" />
                   <img src="https://cdn-icons-png.flaticon.com/512/2111/2111710.png" className="platform-icon" alt="Vimeo" />
                   <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" className="platform-icon" alt="Google Drive" />
@@ -126,18 +136,18 @@ function App() {
               <div className="step-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
                 <div className="step-card fade-in">
                   <div className="step-number">1</div>
-                  <h3 style={{ marginBottom: '1rem' }}>Paste a video link or upload</h3>
-                  <p style={{ color: 'var(--text-secondary)' }}>Paste a link from YouTube, TikTok, or upload a video file directly from your device.</p>
+                  <h3 className="step-title">Paste a video link or upload</h3>
+                  <p className="step-desc">Paste a link from YouTube, TikTok, or upload a video file directly from your device.</p>
                 </div>
                 <div className="step-card fade-in" style={{ animationDelay: '0.1s' }}>
                   <div className="step-number">2</div>
-                  <h3 style={{ marginBottom: '1rem' }}>Let AI understand and summarize</h3>
-                  <p style={{ color: 'var(--text-secondary)' }}>Alexandria instantly produces a concise, expert-level summary and an interactive mind map.</p>
+                  <h3 className="step-title">Let AI understand and summarize</h3>
+                  <p className="step-desc">Alexandria instantly produces a concise, expert-level summary and an interactive mind map.</p>
                 </div>
                 <div className="step-card fade-in" style={{ animationDelay: '0.2s' }}>
                   <div className="step-number">3</div>
-                  <h3 style={{ marginBottom: '1rem' }}>Get instant insights & share</h3>
-                  <p style={{ color: 'var(--text-secondary)' }}>Skim key points, ask follow-up questions, and jump to exact moments in the video.</p>
+                  <h3 className="step-title">Get instant insights & share</h3>
+                  <p className="step-desc">Skim key points, ask follow-up questions, and jump to exact moments in the video.</p>
                 </div>
               </div>
             </section>
@@ -167,18 +177,22 @@ function App() {
             {/* FAQ Section */}
             <section className="section-container" style={{ maxWidth: '800px' }}>
               <h2 className="section-title" style={{ textAlign: 'left' }}>Frequently Asked Questions</h2>
-              <div className="faq-item">
-                <div className="faq-question">1. Is Alexandria summary generator free? <ArrowRight size={20} /></div>
-              </div>
-              <div className="faq-item">
-                <div className="faq-question">2. What is the best AI video summarizer? <ArrowRight size={20} /></div>
-              </div>
-              <div className="faq-item">
-                <div className="faq-question">3. How accurate are the video summaries? <ArrowRight size={20} /></div>
-              </div>
-              <div className="faq-item">
-                <div className="faq-question">4. How long can a video be? <ArrowRight size={20} /></div>
-              </div>
+              <FAQItem 
+                question="1. Is Alexandria summary generator free?" 
+                answer="Yes! You can start using Alexandria for free with a generous monthly quota. We also offer premium tiers for heavy users who need unlimited processing and advanced AI features." 
+              />
+              <FAQItem 
+                question="2. What is the best AI video summarizer?" 
+                answer="Alexandria stands out by not only summarizing the video but also providing interactive mind maps, exact timestamp links, and an integrated chat to ask specific questions about the content." 
+              />
+              <FAQItem 
+                question="3. How accurate are the video summaries?" 
+                answer="We use state-of-the-art LLMs combined with Retrieval-Augmented Generation (RAG) to ensure our summaries are highly accurate, contextual, and directly tied to the original transcript." 
+              />
+              <FAQItem 
+                question="4. How long can a video be?" 
+                answer="Alexandria can process videos up to 4 hours in length in a single session, making it perfect for full university lectures, long podcasts, and extensive tutorials." 
+              />
             </section>
           </>
         )}
