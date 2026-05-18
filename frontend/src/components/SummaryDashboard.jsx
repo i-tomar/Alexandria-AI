@@ -38,6 +38,12 @@ export default function SummaryDashboard({ videoId, onTimestampClick, isProcessi
         if (data.recent_summary && data.recent_summary !== 'No content available') setRecent(data.recent_summary);
         if (data.quality) setQuality(data.quality);
         setLoading(data.status !== 'success');
+
+        // Stop polling once analysis is done
+        if (data.status === 'success' && interval) {
+          window.clearInterval(interval);
+        }
+
         return data.status;
       } catch (err) {
         if (stopped || requestSeq.current !== requestId) return 'stale';
@@ -50,12 +56,15 @@ export default function SummaryDashboard({ videoId, onTimestampClick, isProcessi
       }
     };
 
-    fetchAnalysis();
-    const interval = isProcessing
-      ? window.setInterval(() => {
+    let interval = null;
+    fetchAnalysis().then(status => {
+      // Only start polling if still processing after the first fetch
+      if (!stopped && status !== 'success' && status !== 'stale' && isProcessing) {
+        interval = window.setInterval(() => {
           void fetchAnalysis();
-        }, 1500)
-      : null;
+        }, 8000); // Poll every 8 seconds, not 1.5 seconds
+      }
+    });
 
     return () => {
       stopped = true;

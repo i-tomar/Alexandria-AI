@@ -117,7 +117,8 @@ def summarize_by_topics(text: str, chunks: List[dict]) -> List[dict]:
             if gemini_available():
                 prompt = (
                     "Summarize the following transcript snippets as a short topic summary. "
-                    "Stay faithful to the text, avoid adding facts, and keep it concise.\n\n"
+                    "Output ONLY the summary text. Do not include introductory phrases or explanations. "
+                    "If the snippets are repetitive or contain little info, just state what is mentioned.\n\n"
                     f"Topic: {topic}\n\nSnippets:\n{_chunk_context(relevant_chunks, limit=6)}"
                 )
                 try:
@@ -148,8 +149,9 @@ def get_last_n_minutes_summary(chunks: List[dict], minutes: int = 5) -> Tuple[st
         summary_text = extractive_summary(" ".join([_clean_text_fragment(c.get('text', '')) for c in relevant_chunks]), num_sentences=3)
         if gemini_available():
             prompt = (
-                f"Summarize the last {minutes} minutes of this transcript in 2-4 sentences. "
-                "Be grounded only in the transcript, concise, and human-readable.\n\n"
+                f"Summarize the last {minutes} minutes of this transcript. "
+                "Output ONLY the summary text in 2-3 sentences. Do not include meta-commentary like 'There is no conversation' or 'I cannot summarize'. "
+                "If the content is brief, simply describe what the speaker is doing or saying.\n\n"
                 f"Transcript:\n{_chunk_context(relevant_chunks, limit=16)}"
             )
             try:

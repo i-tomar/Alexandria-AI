@@ -87,11 +87,11 @@ function App() {
                 <span>🌿 Botanical Intelligence • Trusted by 50,000+ Learners</span>
               </div>
 
-              <h1 className="font-display fade-in" style={{ 
-                fontSize: '4rem', 
-                lineHeight: 1.15, 
-                marginBottom: '2rem', 
-                fontWeight: 800, 
+              <h1 className="font-display fade-in" style={{
+                fontSize: '4rem',
+                lineHeight: 1.15,
+                marginBottom: '2rem',
+                fontWeight: 800,
                 color: '#312e81',
                 letterSpacing: '-0.02em'
               }}>
@@ -177,21 +177,21 @@ function App() {
             {/* FAQ Section */}
             <section className="section-container" style={{ maxWidth: '800px' }}>
               <h2 className="section-title" style={{ textAlign: 'left' }}>Frequently Asked Questions</h2>
-              <FAQItem 
-                question="1. Is Alexandria summary generator free?" 
-                answer="Yes! You can start using Alexandria for free with a generous monthly quota. We also offer premium tiers for heavy users who need unlimited processing and advanced AI features." 
+              <FAQItem
+                question="1. Is Alexandria summary generator free?"
+                answer="Yes! You can start using Alexandria for free with a generous monthly quota. We also offer premium tiers for heavy users who need unlimited processing and advanced AI features."
               />
-              <FAQItem 
-                question="2. What is the best AI video summarizer?" 
-                answer="Alexandria stands out by not only summarizing the video but also providing interactive mind maps, exact timestamp links, and an integrated chat to ask specific questions about the content." 
+              <FAQItem
+                question="2. What is the best AI video summarizer?"
+                answer="Alexandria stands out by not only summarizing the video but also providing interactive mind maps, exact timestamp links, and an integrated chat to ask specific questions about the content."
               />
-              <FAQItem 
-                question="3. How accurate are the video summaries?" 
-                answer="We use state-of-the-art LLMs combined with Retrieval-Augmented Generation (RAG) to ensure our summaries are highly accurate, contextual, and directly tied to the original transcript." 
+              <FAQItem
+                question="3. How accurate are the video summaries?"
+                answer="We use state-of-the-art LLMs combined with Retrieval-Augmented Generation (RAG) to ensure our summaries are highly accurate, contextual, and directly tied to the original transcript."
               />
-              <FAQItem 
-                question="4. How long can a video be?" 
-                answer="Alexandria can process videos up to 4 hours in length in a single session, making it perfect for full university lectures, long podcasts, and extensive tutorials." 
+              <FAQItem
+                question="4. How long can a video be?"
+                answer="Alexandria can process videos up to 4 hours in length in a single session, making it perfect for full university lectures, long podcasts, and extensive tutorials."
               />
             </section>
           </>

@@ -319,18 +319,26 @@ def ask(request: AskRequest):
 def ask_stream(request: AskRequest):
     try:
         print(f"Stream ask request for video_id={request.video_id}")
+        from .rag import stream_question
         history = get_session_history(request.session_id) if request.session_id else []
-        answer, timestamps = ask_question(request.video_id, request.question, history)
         
-        def generate():
-            for char in answer:
-                yield json.dumps({"chunk": char}) + "\n"
-            yield json.dumps({"timestamps": timestamps, "done": True}) + "\n"
-        
-        if request.session_id:
-            add_to_session(request.session_id, request.question, answer)
-        
-        return StreamingResponse(generate(), media_type="application/x-ndjson")
+        def generate_and_save():
+            full_answer = ""
+            for chunk_str in stream_question(request.video_id, request.question, history):
+                yield chunk_str
+                try:
+                    data = json.loads(chunk_str)
+                    if "chunk" in data:
+                        full_answer += data["chunk"]
+                except Exception:
+                    pass
+            if request.session_id and full_answer:
+                add_to_session(request.session_id, request.question, full_answer)
+
+        return StreamingResponse(
+            generate_and_save(), 
+            media_type="application/x-ndjson"
+        )
     except Exception as e:
         print(f"Stream ask failed: {e}")
         raise HTTPException(status_code=500, detail=f"Stream ask failed: {str(e)}")
@@ -441,7 +449,7 @@ def timestamps(video_id: str):
 
         import chromadb
         client = chromadb.PersistentClient(path="./chroma_db")
-        collection = client.get_collection(name="transcripts")
+        collection = client.get_or_create_collection(name="transcripts")
         results = collection.get(where={"video_id": video_id})
         if not results['ids']:
             raise Exception("No timestamps found")
@@ -509,7 +517,7 @@ def list_videos():
 
         import chromadb
         client = chromadb.PersistentClient(path="./chroma_db")
-        collection = client.get_collection(name="transcripts")
+        collection = client.get_or_create_collection(name="transcripts")
         results = collection.get()
         vids = set()
         for meta in results.get('metadatas', []):
@@ -558,7 +566,7 @@ def quality(video_id: str):
 
         import chromadb
         client = chromadb.PersistentClient(path="./chroma_db")
-        collection = client.get_collection(name="transcripts")
+        collection = client.get_or_create_collection(name="transcripts")
         results = collection.get(where={"video_id": video_id})
         if not results.get("metadatas"):
             return {
@@ -586,7 +594,7 @@ def clear_video(video_id: str):
         if _chroma_enabled():
             import chromadb
             client = chromadb.PersistentClient(path="./chroma_db")
-            collection = client.get_collection(name="transcripts")
+            collection = client.get_or_create_collection(name="transcripts")
             try:
                 collection.delete(where={"video_id": video_id})
             except Exception as e:
@@ -596,6 +604,18 @@ def clear_video(video_id: str):
     except Exception as e:
         print(f"Clear video failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.on_event("startup")
+async def startup_event():
+    from .utils.gemini_client import gemini_available
+    from .rag import _chroma_enabled, _embeddings_enabled
+    
+    print("\n" + "="*40)
+    print("AI LEARNING COMPANION - STARTUP STATUS")
+    print(f"Gemini AI:    {'✅ ENABLED' if gemini_available() else '❌ DISABLED (Check Key/Env)'}")
+    print(f"Chroma DB:    {'✅ ENABLED' if _chroma_enabled() else '❌ DISABLED'}")
+    print(f"Embeddings:   {'✅ ENABLED' if _embeddings_enabled() else '❌ DISABLED'}")
+    print("="*40 + "\n")
 
 @app.get("/health")
 def health():

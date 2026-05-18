@@ -513,7 +513,7 @@ def _assess_transcript_quality(transcript: str, segments: list[dict], source: st
     if len(segments) < 3:
         warnings.append("Few transcript chunks")
     if unique_ratio < 0.25 and len(words) >= 40:
-        warnings.append("Highly repetitive transcript")
+        warnings.append("Repetitive phrases detected (typical for lectures)")
     if source == "unknown":
         warnings.append("Transcript source unknown")
     if source in {"youtube_metadata", "url_only"}:

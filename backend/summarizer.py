@@ -1,9 +1,10 @@
 import os
+import json
 from .utils.summary_helper import summarize_by_topics, get_last_n_minutes_summary, extractive_summary
 from .utils.transcript_store import get_chunks
 from .utils.gemini_client import generate_text, gemini_available
 
-_summary_cache = {}
+_summary_cache = {}  # video_id -> (summary_text, method)
 
 
 def _chroma_enabled() -> bool:
@@ -86,12 +87,20 @@ def _fallback_topics(chunks, max_topics=5):
 
 def _build_overall_summary_prompt(chunks):
     context = []
-    for chunk in chunks[:16]:
-        context.append(f"({chunk.get('start', 0):.2f}-{chunk.get('end', 0):.2f}s) {chunk.get('text', '')}")
+    # Use more chunks for a better overview (up to 30)
+    for chunk in chunks[:30]:
+        context.append(f"- {chunk.get('text', '')}")
+    
     return (
-        "Write a concise overall summary of the video transcript below. "
-        "Stay faithful to the transcript only. Do not add outside knowledge.\n\n"
-        + "\n".join(context)
+        "### ROLE\n"
+        "You are Alexandria AI. Provide a professional 'Overall Insight' of the video transcript provided below.\n\n"
+        "### INSTRUCTIONS\n"
+        "1. Identify the core message and key takeaways.\n"
+        "2. Output ONLY the insight text. Do not explain why you can't summarize or if the transcript is too short.\n"
+        "3. Start your response with '🌿 **Alexandria Insight:**'.\n\n"
+        "### TRANSCRIPT EXCERPT\n"
+        + "\n".join(context) + "\n\n"
+        "### OVERALL INSIGHT"
     )
 
 def get_summary(video_id):
@@ -101,34 +110,55 @@ def get_summary(video_id):
 
 
 def get_summary_with_method(video_id):
-    """Return a tuple (summary_text, method) where method is 'gemini' or 'extractive_fallback'.
-    This allows callers to know which summarization approach produced the result."""
     chunks = _load_chunks(video_id)
     if not chunks:
         return ("Summary is not available yet. Please ingest a video first.", "none")
 
-    key = _cache_key(video_id, chunks, "overall")
-    if key in _summary_cache:
-        return (_summary_cache[key], "cached")
+    # Cache hit: return immediately if we already have a Gemini summary
+    if video_id in _summary_cache:
+        cached_summary, cached_method = _summary_cache[video_id]
+        if cached_method in ("gemini", "groq"):
+            return (cached_summary, cached_method)
 
-    full_text = " ".join([c.get('text', '') for c in chunks if c.get('text')])
-    summary = extractive_summary(full_text, num_sentences=4)
-    method = "extractive_fallback"
+    summary = ""
+    method = "unknown"
 
-    if chunks and gemini_available():
+    if gemini_available():
         try:
-            gemini_summary = generate_text(_build_overall_summary_prompt(chunks), temperature=0.2, max_output_tokens=220)
-            if gemini_summary:
+            from .utils.gemini_client import get_active_provider
+            active_p = get_active_provider().capitalize()
+            print(f"DEBUG: Attempting {active_p} Overall Summary for {video_id}...")
+            gemini_summary = generate_text(_build_overall_summary_prompt(chunks), temperature=0.3, max_output_tokens=500)
+            if gemini_summary == "ERROR: INVALID_API_KEY":
+                print("CRITICAL: Gemini API Key is INVALID.")
+                method = "error"
+            elif gemini_summary == "ERROR: QUOTA_EXCEEDED":
+                print("WARNING: Quota exceeded - using extractive fallback for now.")
+                method = "quota_fallback"
+            elif gemini_summary:
                 summary = gemini_summary
-                method = "gemini"
+                from .utils.gemini_client import get_active_provider
+                method = get_active_provider()
+                print(f"DEBUG: {method.capitalize()} Summary Successful.")
+            else:
+                print("DEBUG: Gemini returned empty text.")
         except Exception as e:
             print(f"Gemini overall summary failed: {e}")
+            method = "error"
 
-    summary = _clip(summary, 1100)
+    # Fallback to extractive if Gemini failed or quota exceeded
     if not summary:
-        summary = _clip(" ".join([c.get('text', '') for c in chunks[:8]]), 900)
+        print("DEBUG: Using extractive fallback for summary.")
+        full_text = " ".join([c.get('text', '') for c in chunks if c.get('text')])
+        summary = extractive_summary(full_text, num_sentences=4)
+        if method not in ("error", "quota_fallback"):
+            method = "extractive_fallback"
 
-    _summary_cache[key] = summary
+    summary = _clip(summary, 1500)
+
+    # Cache the result to prevent redundant API calls during the same session
+    _summary_cache[video_id] = (summary, method)
+
     return (summary, method)
 
 def get_topic_summaries(video_id):

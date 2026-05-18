@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Alexandria Extension</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #334155;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    p {
+      font-size: 0.9rem;
+      color: #64748b;
+      line-height: 1.4;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #0f172a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #1e293b;
+    }
+    button:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .status.error {
+      color: #ef4444;
+    }
+    .status.success {
+      color: #10b981;
+    }
+    .loader {
+      display: none;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #0284c7;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); margin: -16px -16px 16px -16px; padding: 20px; color: white;">
+    <h2 style="color: white; margin: 0; font-family: 'Literata', serif;">🌿 Alexandria</h2>
+    <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 0.8rem;">Your AI Learning Companion</p>
+  </div>
+  
+  <p>Analyze the lecture on this tab:</p>
+  
+  <input type="text" id="videoUrl" placeholder="Detecting video..." readonly />
+  <button id="analyzeBtn" disabled>Analyze with AI</button>
+  
+  <div id="loader" class="loader">
+    <div style="margin-bottom: 8px;">Processing transcript...</div>
+  </div>
+  <div id="statusMsg" class="status"></div>
+
+  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+  
+  <button id="dashboardBtn" style="background-color: transparent; color: #0f172a; border: 1px solid #0f172a;">Open Full Dashboard</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>
