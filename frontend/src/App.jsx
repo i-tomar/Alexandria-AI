@@ -237,7 +237,7 @@ function App() {
 
               {/* Right Column: AI Insights and Chat */}
               <div className="workspace-right-col" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: 'calc(100vh - 200px)', minWidth: 0 }}>
-                <div style={{ flex: '1', overflowY: 'hidden' }}>
+                <div style={{ flex: '1.5', overflowY: 'hidden' }}>
                   <SummaryDashboard videoId={videoId} isProcessing={isProcessing} previewTitle={ingestInfo?.preview_title} previewSummary={ingestInfo?.preview_summary} onTimestampClick={handleTimestampClick} />
                 </div>
                 <div style={{ flex: '1', overflowY: 'hidden' }}>

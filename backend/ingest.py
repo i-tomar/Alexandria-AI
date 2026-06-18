@@ -709,27 +709,117 @@ def ingest_assemblyai_file(file_bytes: bytes, file_name: str, video_id: str):
     return payload
 
 
+def extract_manual_english_captions(url: str) -> list | None:
+    """
+    Attempts to extract MANUAL English captions only.
+    Auto-generated captions (kind='asr') are intentionally rejected
+    due to quality issues (Hindi/English mixing, punctuation errors).
+    Returns list of {text, start, end} dicts or None if unavailable.
+    """
+    import yt_dlp
+    import os
+    import webvtt
+
+    # Step 1: Fetch video info WITHOUT downloading
+    ydl_opts = {"quiet": True, "skip_download": True}
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    # Step 2: Check subtitles dict (manual only — NOT automatic_captions)
+    subtitles = info.get("subtitles", {})  # manual captions only
+    # DO NOT use info.get("automatic_captions") — those are asr/auto-generated
+
+    # Step 3: Find English manual captions
+    english_key = None
+    for lang_key in subtitles.keys():
+        if lang_key in ("en", "en-US", "en-GB", "en-orig"):
+            english_key = lang_key
+            break
+
+    if not english_key:
+        # No manual English captions found → fall back to AssemblyAI
+        return None
+
+    # Step 4: Download the manual English captions as .vtt
+    import tempfile, uuid
+    temp_dir = tempfile.mkdtemp()
+    output_template = os.path.join(temp_dir, f"{uuid.uuid4()}")
+
+    ydl_opts_download = {
+        "quiet": True,
+        "skip_download": True,
+        "writesubtitles": True,          # manual captions
+        "writeautomaticsub": False,       # NEVER download auto-captions
+        "subtitleslangs": [english_key],
+        "subtitlesformat": "vtt",
+        "outtmpl": output_template
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts_download) as ydl:
+        ydl.download([url])
+
+    # Step 5: Find the downloaded .vtt file
+    vtt_file = None
+    for fname in os.listdir(temp_dir):
+        if fname.endswith(".vtt"):
+            vtt_file = os.path.join(temp_dir, fname)
+            break
+
+    if not vtt_file:
+        return None  # Download failed silently → fallback
+
+    # Step 6: Parse .vtt into {text, start, end} dicts
+    chunks = []
+    for caption in webvtt.read(vtt_file):
+        # Convert "HH:MM:SS.mmm" → float seconds
+        def timestamp_to_seconds(ts: str) -> float:
+            parts = ts.replace(",", ".").split(":")
+            if len(parts) == 3:
+                h, m, s = parts
+                return int(h) * 3600 + int(m) * 60 + float(s)
+            elif len(parts) == 2:
+                m, s = parts
+                return int(m) * 60 + float(s)
+            return float(parts[-1])
+
+        text = caption.text.strip()
+        if not text:
+            continue
+
+        chunks.append({
+            "text": text,
+            "start": timestamp_to_seconds(caption.start),
+            "end": timestamp_to_seconds(caption.end),
+            "source": "manual_caption"
+        })
+
+    # Cleanup temp files
+    import shutil
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+    if not chunks:
+        return None  # Parsed empty → fallback
+
+    return chunks
+
+
 def ingest_video(video_url, video_id):
     transcript = None
     segments = []
     source = "unknown"
     canonical_url = _canonical_youtube_url(video_url)
+    
     if video_url and ("youtube.com" in video_url or "youtu.be" in video_url):
-        entries = _load_youtube_transcript(canonical_url)
-        if entries:
-            segments = _create_segments_from_entries(entries)
+        # Try Fast Path: manual English captions only
+        caption_chunks = extract_manual_english_captions(canonical_url)
+
+        if caption_chunks is not None:
+            segments = caption_chunks
             transcript = " ".join([seg["text"] for seg in segments])
-            source = "youtube_captions"
-    # If we couldn't obtain a transcript from YouTube, avoid silently falling back
-    # to a demo transcript. Ask the caller to provide a file or configure a
-    # transcription provider instead.
-    if not transcript:
-        # Fast fallback: try auto subtitles via yt-dlp before expensive ASR.
-        entries = _load_youtube_subtitles(canonical_url)
-        if entries:
-            segments = _create_segments_from_entries(entries)
-            transcript = " ".join([seg["text"] for seg in segments])
-            source = "youtube_auto_subtitles"
+            source = "fast_path"
+            print(f"[{video_id}] Fast Path: {len(segments)} manual caption chunks found")
+        else:
+            print(f"[{video_id}] Slow Path: No manual English captions. Using AssemblyAI.")
 
     if not transcript:
         # Fallback: transcribe the downloaded audio with AssemblyAI when enabled.

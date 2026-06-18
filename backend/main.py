@@ -612,9 +612,9 @@ async def startup_event():
     
     print("\n" + "="*40)
     print("AI LEARNING COMPANION - STARTUP STATUS")
-    print(f"Gemini AI:    {'✅ ENABLED' if gemini_available() else '❌ DISABLED (Check Key/Env)'}")
-    print(f"Chroma DB:    {'✅ ENABLED' if _chroma_enabled() else '❌ DISABLED'}")
-    print(f"Embeddings:   {'✅ ENABLED' if _embeddings_enabled() else '❌ DISABLED'}")
+    print(f"Gemini AI:    {'[+] ENABLED' if gemini_available() else '[-] DISABLED (Check Key/Env)'}")
+    print(f"Chroma DB:    {'[+] ENABLED' if _chroma_enabled() else '[-] DISABLED'}")
+    print(f"Embeddings:   {'[+] ENABLED' if _embeddings_enabled() else '[-] DISABLED'}")
     print("="*40 + "\n")
 
 @app.get("/health")

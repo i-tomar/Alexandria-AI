@@ -46,9 +46,10 @@ def _load_chunks(video_id):
 
 
 def _cache_key(video_id, chunks, kind):
-    last_end = int(max([chunk.get('end', 0) or 0 for chunk in chunks], default=0))
-    text_size = sum(len(chunk.get('text', '')) for chunk in chunks)
-    return (kind, video_id, len(chunks), last_end, text_size)
+    # Bucket chunk count and text size to prevent regenerating on every single new chunk
+    bucketed_chunks = len(chunks) // 10
+    text_size_bucket = sum(len(chunk.get('text', '')) for chunk in chunks) // 1000
+    return (kind, video_id, bucketed_chunks, text_size_bucket)
 
 
 def _clip(text, limit=900):
@@ -114,11 +115,9 @@ def get_summary_with_method(video_id):
     if not chunks:
         return ("Summary is not available yet. Please ingest a video first.", "none")
 
-    # Cache hit: return immediately if we already have a Gemini summary
-    if video_id in _summary_cache:
-        cached_summary, cached_method = _summary_cache[video_id]
-        if cached_method in ("gemini", "groq"):
-            return (cached_summary, cached_method)
+    key = _cache_key(video_id, chunks, "overall")
+    if key in _summary_cache:
+        return _summary_cache[key]
 
     summary = ""
     method = "unknown"
@@ -157,7 +156,7 @@ def get_summary_with_method(video_id):
     summary = _clip(summary, 1500)
 
     # Cache the result to prevent redundant API calls during the same session
-    _summary_cache[video_id] = (summary, method)
+    _summary_cache[key] = (summary, method)
 
     return (summary, method)
 
@@ -183,5 +182,11 @@ def get_last_minutes_summary(video_id, minutes: int = 5):
     if not chunks:
         return {"summary": "No content available", "timestamp": 0}
 
+    key = _cache_key(video_id, chunks, f"recent_{minutes}")
+    if key in _summary_cache:
+        return _summary_cache[key]
+
     summary_text, timestamp = get_last_n_minutes_summary(chunks, minutes)
-    return {"summary": _clip(summary_text, 600), "timestamp": timestamp}
+    result = {"summary": _clip(summary_text, 600), "timestamp": timestamp}
+    _summary_cache[key] = result
+    return result
