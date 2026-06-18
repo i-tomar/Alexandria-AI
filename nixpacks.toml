@@ -1,0 +1,11 @@
+[providers]
+python = {}
+
+[phases.setup]
+nixPkgs = ["ffmpeg"]
+
+[phases.install]
+cmds = ["python -m venv /opt/venv", ". /opt/venv/bin/activate", "pip install -r backend/requirements.txt"]
+
+[start]
+cmd = ". /opt/venv/bin/activate && uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
