@@ -1,5 +1,8 @@
 providers = ["python"]
 
+[phases.setup]
+nixPkgs = ["ffmpeg", "nodejs"]
+
 [phases.install]
 cmds = ["python -m venv /opt/venv", "/opt/venv/bin/pip install -r backend/requirements.txt"]
 
