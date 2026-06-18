@@ -30,13 +30,15 @@ const FAQItem = ({ question, answer }) => {
 function App() {
   const [videoId, setVideoId] = useState(null);
   const [youtubeId, setYoutubeId] = useState(null);
+  const [fileUrl, setFileUrl] = useState(null);
   const [ingestInfo, setIngestInfo] = useState(null);
   const playerRef = useRef(null);
   const isProcessing = ingestInfo?.status === 'processing';
 
-  const handleIngestSuccess = (id, ytId, info) => {
+  const handleIngestSuccess = (id, ytId, info, uploadedFileUrl) => {
     setVideoId(id);
     setYoutubeId(ytId);
+    setFileUrl(uploadedFileUrl || null);
     setIngestInfo(info || null);
     // Smooth scroll to results
     setTimeout(() => {
@@ -230,7 +232,7 @@ function App() {
               {/* Left Column: Player and Chapters */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', minWidth: 0 }}>
                 <div className="atmospheric-glow" style={{ borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-                  <VideoPlayer videoId={youtubeId} ref={playerRef} />
+                  <VideoPlayer videoId={youtubeId} fileUrl={fileUrl} ref={playerRef} />
                 </div>
                 <Timeline videoId={videoId} isProcessing={isProcessing} onTimestampClick={handleTimestampClick} />
               </div>

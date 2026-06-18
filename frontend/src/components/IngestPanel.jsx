@@ -59,7 +59,7 @@ export default function IngestPanel({ onIngestSuccess }) {
     throw new Error('Ingest is taking longer than expected. Please check again in a moment.');
   };
 
-  const startBackgroundMonitoring = async (jobId, ytId) => {
+  const startBackgroundMonitoring = async (jobId, ytId, fileUrl) => {
     try {
       const jobResult = await waitForJobCompletion(jobId);
       if (jobResult.status === 'failed') {
@@ -76,7 +76,7 @@ export default function IngestPanel({ onIngestSuccess }) {
       setSuccess(true);
       setResult(finalInfo);
       setStatusMessage('Transcript ready. Final summary is refreshing now...');
-      onIngestSuccess(jobResult.video_id, ytId, finalInfo);
+      onIngestSuccess(jobResult.video_id, ytId, finalInfo, fileUrl);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -108,6 +108,11 @@ export default function IngestPanel({ onIngestSuccess }) {
     }
     
     try {
+      let fileUrl = null;
+      if (file) {
+        fileUrl = URL.createObjectURL(file);
+      }
+
       const ingestResult = url 
         ? await ingestVideo(url)
         : await ingestFile(file, title || file.name);
@@ -122,15 +127,15 @@ export default function IngestPanel({ onIngestSuccess }) {
         };
         setResult(previewInfo);
         setStatusMessage(`Preview ready in seconds. Final processing continues in the background... job ${ingestResult.job_id.slice(0, 8)}`);
-        onIngestSuccess(ingestResult.video_id, ytId, previewInfo);
-        void startBackgroundMonitoring(ingestResult.job_id, ytId);
+        onIngestSuccess(ingestResult.video_id, ytId, previewInfo, fileUrl);
+        void startBackgroundMonitoring(ingestResult.job_id, ytId, fileUrl);
         return;
       }
 
       setSuccess(true);
       setResult(ingestResult);
       
-      onIngestSuccess(ingestResult.video_id, ytId, ingestResult);
+      onIngestSuccess(ingestResult.video_id, ytId, ingestResult, fileUrl);
     } catch (err) {
       setError(err.message);
     } finally {
